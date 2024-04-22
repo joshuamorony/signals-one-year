@@ -1,55 +1,37 @@
-import { Injectable, computed, inject, signal } from "@angular/core";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { Injectable, Signal, computed, inject } from "@angular/core";
+import { toSignal } from "@angular/core/rxjs-interop";
 import { ApiService } from "../../shared/data-access/api.service";
 import { Article } from "../../shared/interfaces/article";
 import { FormControl } from "@angular/forms";
-import { Subject, retry, startWith, switchMap } from "rxjs";
+import { Observable, Subject, merge } from "rxjs";
+import {
+  filter,
+  map,
+  retry,
+  shareReplay,
+  startWith,
+  switchMap,
+} from "rxjs/operators";
 
 export interface ArticlesState {
-  articles: Article[];
-  filter: string | null;
-  error: string | null;
-  status: "loading" | "success" | "error";
-  currentPage: number;
+  articles: Signal<Article[]>;
+  filter: Signal<string | null>;
+  error: Signal<string | null>;
+  status: Signal<"loading" | "success" | "error">;
+  currentPage: Signal<number>;
 }
 
 @Injectable()
 export class ArticlesService {
   private apiService = inject(ApiService);
-
-  private state = signal<ArticlesState>({
-    articles: [],
-    filter: null,
-    error: null,
-    status: "loading",
-    currentPage: 1,
-  });
-
-  filterControl = new FormControl();
-
-  // selectors
-  articles = computed(() => this.state().articles);
-  filter = computed(() => this.state().filter);
-  error = computed(() => this.state().error);
-  status = computed(() => this.state().status);
-  currentPage = computed(() => this.state().currentPage);
-
-  filteredArticles = computed(() => {
-    const filter = this.filter();
-
-    return filter
-      ? this.articles().filter((article) =>
-          article.title.toLowerCase().includes(filter.toLowerCase())
-        )
-      : this.articles();
-  });
+  public filterControl = new FormControl();
 
   // sources
-  retry$ = new Subject<void>();
-  error$ = new Subject<Error>();
-  currentPage$ = new Subject<number>();
+  public retry$ = new Subject<void>();
+  public currentPage$ = new Subject<number>();
+  private error$ = new Subject<Error>();
 
-  articlesForPage$ = this.currentPage$.pipe(
+  private articlesForPage$: Observable<Article[]> = this.currentPage$.pipe(
     startWith(1),
     switchMap((page) =>
       this.apiService.getArticlesByPage(page).pipe(
@@ -58,53 +40,54 @@ export class ArticlesService {
             this.error$.next(err);
             return this.retry$;
           },
-        })
-      )
-    )
+        }),
+        // note
+        startWith([]),
+      ),
+    ),
+    // note
+    shareReplay(1),
   );
 
-  filter$ = this.filterControl.valueChanges;
+  private filter$ = this.filterControl.valueChanges.pipe(
+    map((filter) => (filter === "" ? null : filter)),
+  );
 
-  constructor() {
-    // reducers
-    this.articlesForPage$.pipe(takeUntilDestroyed()).subscribe((articles) =>
-      this.state.update((state) => ({
-        ...state,
-        articles,
-        status: "success",
-      }))
-    );
+  // note
+  private status$ = merge(
+    this.articlesForPage$.pipe(
+      filter((articles) => articles.length > 0),
+      map(() => "success" as const),
+    ),
+    merge(this.currentPage$, this.retry$).pipe(map(() => "loading" as const)),
+    this.error$.pipe(map(() => "error" as const)),
+  );
 
-    this.currentPage$
-      .pipe(takeUntilDestroyed())
-      .subscribe((currentPage) =>
-        this.state.update((state) => ({
-          ...state,
-          currentPage,
-          status: "loading",
-          articles: [],
-        }))
-      );
+  // selectors
+  private currentPage = toSignal(this.currentPage$, { initialValue: 1 });
+  private articles = toSignal(this.articlesForPage$, { initialValue: [] });
+  private filter = toSignal(this.filter$);
+  private error = toSignal(this.error$.pipe(map((err) => err.message)), {
+    initialValue: null,
+  });
+  private status = toSignal(this.status$, { initialValue: "loading" });
 
-    this.filter$.pipe(takeUntilDestroyed()).subscribe((filter) =>
-      this.state.update((state) => ({
-        ...state,
-        filter: filter === "" ? null : filter,
-      }))
-    );
+  private filteredArticles = computed(() => {
+    const filter = this.filter();
 
-    this.retry$
-      .pipe(takeUntilDestroyed())
-      .subscribe(() =>
-        this.state.update((state) => ({ ...state, status: "loading" }))
-      );
+    return filter
+      ? this.articles().filter((article) =>
+          article.title.toLowerCase().includes(filter.toLowerCase()),
+        )
+      : this.articles();
+  });
 
-    this.error$.pipe(takeUntilDestroyed()).subscribe((error) =>
-      this.state.update((state) => ({
-        ...state,
-        status: "error",
-        error: error.message,
-      }))
-    );
-  }
+  // state
+  public state: ArticlesState = {
+    currentPage: this.currentPage,
+    articles: this.filteredArticles,
+    filter: this.filter,
+    error: this.error,
+    status: this.status,
+  };
 }

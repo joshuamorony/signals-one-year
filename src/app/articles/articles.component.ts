@@ -11,20 +11,20 @@ import { PaginationComponent } from "./ui/pagination.component";
   providers: [ArticlesService],
   template: `
     <app-search [control]="service.filterControl" />
-    <app-list [articles]="service.filteredArticles()" />
+    <app-list [articles]="service.state.articles()" />
 
     <div class="status">
-      @if (service.status() === "loading") {
+      @if (service.state.status() === "loading") {
         <p>Loading...</p>
       }
-      @if (service.status() === "error") {
-        <p>{{ service.error() }}</p>
+      @if (service.state.status() === "error") {
+        <p>{{ service.state.error() }}</p>
         <button (click)="service.retry$.next()">Retry</button>
       }
     </div>
 
     <app-pagination
-      [currentPage]="service.currentPage()"
+      [currentPage]="service.state.currentPage()"
       (pageChange)="service.currentPage$.next($event)"
     />
   `,

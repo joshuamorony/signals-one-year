@@ -1,14 +1,16 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
+import { Component, EventEmitter, input, output } from "@angular/core";
 
 @Component({
   standalone: true,
   selector: "app-pagination",
   template: `
-    <button (click)="currentPage > 1 ? pageChange.emit(currentPage - 1) : ''">
+    <button
+      (click)="currentPage() > 1 ? pageChange.emit(currentPage() - 1) : ''"
+    >
       Prev
     </button>
-    {{ currentPage }}
-    <button (click)="pageChange.emit(currentPage + 1)">Next</button>
+    {{ currentPage() }}
+    <button (click)="pageChange.emit(currentPage() + 1)">Next</button>
   `,
   styles: [
     `
@@ -20,6 +22,6 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
   ],
 })
 export class PaginationComponent {
-  @Input({ required: true }) currentPage!: number;
-  @Output() pageChange = new EventEmitter<number>();
+  currentPage = input.required<number>();
+  pageChange = output<number>();
 }

@@ -1,11 +1,11 @@
-import { Component, Input } from "@angular/core";
+import { Component, input } from "@angular/core";
 import { FormControl, ReactiveFormsModule } from "@angular/forms";
 
 @Component({
   standalone: true,
   imports: [ReactiveFormsModule],
   selector: "app-search",
-  template: ` <input [formControl]="control" placeholder="search..." /> `,
+  template: ` <input [formControl]="control()" placeholder="search..." /> `,
   styles: [
     `
       input {
@@ -18,5 +18,5 @@ import { FormControl, ReactiveFormsModule } from "@angular/forms";
   ],
 })
 export class SearchComponent {
-  @Input({ required: true }) control!: FormControl;
+  control = input.required<FormControl>();
 }

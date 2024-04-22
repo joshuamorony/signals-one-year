@@ -6,7 +6,7 @@ import { Article } from "../../shared/interfaces/article";
   selector: "app-list",
   template: `
     <ul>
-      @for (article of articles; track $index) {
+      @for (article of articles(); track $index) {
         <li>
           {{ article.title }}
         </li>
@@ -28,5 +28,5 @@ import { Article } from "../../shared/interfaces/article";
   ],
 })
 export class ListComponent {
-  @Input({ required: true }) articles!: Article[];
+  articles = input.required<Article[]>();
 }

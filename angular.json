@@ -90,10 +90,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "signals-rxjs-demo:build:production"
+              "buildTarget": "signals-rxjs-demo:build:production"
             },
             "development": {
-              "browserTarget": "signals-rxjs-demo:build:development"
+              "buildTarget": "signals-rxjs-demo:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -101,7 +101,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "signals-rxjs-demo:build"
+            "buildTarget": "signals-rxjs-demo:build"
           }
         }
       }
